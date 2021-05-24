@@ -1,0 +1,8 @@
+python3.0+
+sklearn
+flask
+flask-cors
+numpy
+keras
+pandas
+tensorflow
