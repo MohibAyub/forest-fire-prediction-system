@@ -1,24 +1,12 @@
-/**
- * Adds a  draggable marker to the map..
- *
- * @param {H.Map} map                      A HERE Map instance within the
- *                                         application
- * @param {H.mapevents.Behavior} behavior  Behavior implements
- *                                         default interactions for pan/zoom
- */
  function addDraggableMarker(map, behavior){
 
     var marker = new H.map.Marker({lat: 41.9, lng: -6.85}, {
-      // mark the object as volatile for the smooth dragging
       volatility: true
     });
-    // Ensure that the marker can receive drag events
+    
     marker.draggable = true;
     map.addObject(marker);
   
-    // disable the default draggability of the underlying map
-    // and calculate the offset between mouse and target's position
-    // when starting to drag a marker object:
     map.addEventListener('dragstart', function(ev) {
       var target = ev.target,
           pointer = ev.currentPointer;
@@ -30,17 +18,16 @@
     }, false);
   
   
-    // re-enable the default draggability of the underlying map
-    // when dragging has completed
     map.addEventListener('dragend', function(ev) {
       var target = ev.target;
       if (target instanceof H.map.Marker) {
         behavior.enable();
       }
+
+      alert("Coordinates: " + marker.getPosition().lat + "," + " " + marker.getPosition().lng);
+
     }, false);
   
-    // Listen to the drag event and move the position of the marker
-    // as necessary
      map.addEventListener('drag', function(ev) {
       var target = ev.target,
           pointer = ev.currentPointer;
@@ -48,19 +35,61 @@
         target.setGeometry(map.screenToGeo(pointer.viewportX - target['offset'].x, pointer.viewportY - target['offset'].y));
       }
     }, false);
+    
+    const button = document.getElementById("graph");
+
+    button.addEventListener("click", e => {
+      var endpoint = "http://127.0.0.1:8000/predict?c='" + marker.getPosition()['lat'] + "," + marker.getPosition()['lng'] + "'";
+      console.log(endpoint);
+
+      function makeHttpObject() {
+          try {
+              return new XMLHttpRequest();
+          }
+          catch (error) {
+          }
+          try {
+              return new ActiveXObject("Msxml2.XMLHTTP");
+          }
+          catch (error) {
+          }
+          try {
+              return new ActiveXObject("Microsoft.XMLHTTP");
+          }
+          catch (error) {
+          }
+
+          throw new Error("Could not create HTTP request object.");
+      }
+
+      var request = makeHttpObject();
+      request.open("GET", endpoint, true);
+      request.send(null);
+      request.onreadystatechange = function () {
+          if (request.readyState == 4)
+              var text = request.responseText;
+              if (!(isNaN(text))){
+                  text = parseFloat(request.responseText) * 10000;
+              }
+
+              document.getElementById("text").textContent = text;
+              document.getElementById("h4").innerHTML = "m<sup>2</sup>";
+      };
+  });
+
   }
 
   function addCircleToMap(map){
     map.addObject(new H.map.Circle(
-      // The central point of the circle
+  
       {lat: 41.887388, lng: -6.738568},
-      // The radius of the circle in meters
+  
       5500,
       {
         style: {
-          strokeColor: 'rgba(255, 0, 0, 0.6)', // Color of the perimeter
+          strokeColor: 'rgba(255, 0, 0, 0.6)',
           lineWidth: 2,
-          fillColor: 'rgba(255, 0, 0, 0.5)'  // Color of the circle
+          fillColor: 'rgba(255, 0, 0, 0.5)' 
         }
       }
     ));
@@ -68,50 +97,62 @@
 
   function addCircleToMap1(map){
     map.addObject(new H.map.Circle(
-      // The central point of the circle
+      
       {lat: 41.888149, lng: -6.924434},
-      // The radius of the circle in meters
+      
       2500,
       {
         style: {
-          strokeColor: 'rgba(255, 0, 0, 0.6)', // Color of the perimeter
+          strokeColor: 'rgba(255, 0, 0, 0.6)', 
           lineWidth: 2,
-          fillColor: 'rgba(255, 140, 0, 0.5)'  // Color of the circle
+          fillColor: 'rgba(255, 140, 0, 0.5)'  
+        }
+      }
+    ));
+    }
+
+  function addCircleToMap2(map){
+    map.addObject(new H.map.Circle(
+        
+      {lat: 41.794792, lng: -6.548872},
+        
+      1500,
+      {
+        style: {
+          strokeColor: 'rgba(255, 0, 0, 0.6)', 
+          lineWidth: 2,
+          fillColor: 'rgba(255, 140, 0, 0.5)'  
         }
       }
     ));
   }
 
-  /**
-   * Boilerplate map initialization code starts below:
-   */
-  
-  //Step 1: initialize communication with the platform
-  // In your own code, replace variable window.apikey with your own apikey
+
   var platform = new H.service.Platform({
-    apikey: 'VrDmv9xAspWPn-zW1InzjKF-NmIQ8AjWc_DNK2noemQ'
+    app_id: 'devportal-demo-20180625',
+    app_code: '9v2BkviRwi9Ot26kp2IysQ',
+    useHTTPS: true
   });
-  var defaultLayers = platform.createDefaultLayers();
-  
-  //Step 2: initialize a map - this map is centered over Boston
+
+  var pixelRatio = window.devicePixelRatio || 1;
+  var defaultLayers = platform.createDefaultLayers({
+    tileSize: pixelRatio === 1 ? 256 : 512,
+    ppi: pixelRatio === 1 ? undefined : 320
+});
+
   var map = new H.Map(document.getElementById('map'),
-    defaultLayers.vector.normal.map, {
-    center: {lat: 41.9, lng: -6.85},
-    zoom: 11,
-    pixelRatio: window.devicePixelRatio || 1
-  });
-  // add a resize listener to make sure that the map occupies the whole container
-  window.addEventListener('resize', () => map.getViewPort().resize());
+    defaultLayers.normal.map, {
+        center: {lat: 41.9, lng: -6.85},
+        zoom: 11,
+        pixelRatio: pixelRatio
+    });
+
+
+var behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+
+var ui = H.ui.UI.createDefault(map, defaultLayers, 'en-US');
   
-  //Step 3: make the map interactive
-  // MapEvents enables the event system
-  // Behavior implements default interactions for pan/zoom (also on mobile touch environments)
-  var behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
-  
-  // Step 4: Create the default UI:
-  var ui = H.ui.UI.createDefault(map, defaultLayers, 'en-US');
-  
-  // Add the click event listener.
   addDraggableMarker(map, behavior);
   addCircleToMap(map);
   addCircleToMap1(map);
+  addCircleToMap2(map);
